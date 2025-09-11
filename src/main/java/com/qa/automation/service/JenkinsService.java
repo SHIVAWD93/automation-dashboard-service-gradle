@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qa.automation.model.JenkinsResult;
 import com.qa.automation.model.JenkinsTestCase;
+import com.qa.automation.model.Project;
+import com.qa.automation.model.Tester;
 import com.qa.automation.repository.JenkinsResultRepository;
 import com.qa.automation.repository.JenkinsTestCaseRepository;
 import java.time.Instant;
@@ -37,6 +39,10 @@ public class JenkinsService {
     private final JenkinsTestCaseRepository jenkinsTestCaseRepository;
 
     private final TestNGXMLParserService testNGXMLParserService;
+
+    private final TesterService testerService;
+
+    private final ProjectService projectService;
     @Value("${jenkins.url:}")
     private String jenkinsUrl;
     @Value("${jenkins.username:}")
@@ -657,6 +663,177 @@ public class JenkinsService {
         catch (Exception e) {
             System.err.println("Jenkins connection test failed: " + e.getMessage());
             return false;
+        }
+    }
+
+    public List<String> getJobFrequencies() {
+        try {
+            return jenkinsResultRepository.findAll().stream()
+                    .map(result -> {
+                        if (result.getJobFrequency() == null || result.getJobFrequency().isEmpty()) {
+                            result.inferJobFrequency();
+                            return result.getJobFrequency();
+                        }
+                        return result.getJobFrequency();
+                    })
+                    .distinct()
+                    .sorted()
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        catch (Exception e) {
+            log.error("Error getting job frequencies: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Project> getProjectsWithJenkinsResults() {
+        try {
+            return jenkinsResultRepository.findAll().stream()
+                    .filter(result -> result.getProject() != null)
+                    .map(JenkinsResult::getProject)
+                    .distinct()
+                    .sorted((p1, p2) -> p1.getName().compareToIgnoreCase(p2.getName()))
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        catch (Exception e) {
+            log.error("Error getting projects with Jenkins results: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Tester> getAutomationTestersWithJenkinsResults() {
+        try {
+            return jenkinsResultRepository.findAll().stream()
+                    .filter(result -> result.getAutomationTester() != null)
+                    .map(JenkinsResult::getAutomationTester)
+                    .distinct()
+                    .sorted((t1, t2) -> t1.getName().compareToIgnoreCase(t2.getName()))
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        catch (Exception e) {
+            log.error("Error getting automation testers with Jenkins results: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    public Optional<JenkinsResult> findJenkinsResultById(Long id) {
+        try {
+            return jenkinsResultRepository.findById(id);
+        }
+        catch (Exception e) {
+            log.error("Error finding Jenkins result by id {}: {}", id, e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    public JenkinsResult saveJenkinsResult(JenkinsResult result) {
+        try {
+            return jenkinsResultRepository.save(result);
+        }
+        catch (Exception e) {
+            log.error("Error saving Jenkins result: {}", e.getMessage());
+            throw new RuntimeException("Failed to save Jenkins result", e);
+        }
+    }
+
+    public JenkinsResult updateJenkinsResultNotes(Long id, String notes) {
+        try {
+            Optional<JenkinsResult> optionalResult = jenkinsResultRepository.findById(id);
+            if (optionalResult.isEmpty()) {
+                throw new RuntimeException("Jenkins result not found with id: " + id);
+            }
+
+            JenkinsResult result = optionalResult.get();
+            String safeNotes = notes != null ? notes : "";
+            result.setBugsIdentified(safeNotes);
+            result.setFailureReasons(safeNotes);
+
+            return jenkinsResultRepository.save(result);
+        }
+        catch (Exception e) {
+            log.error("Error updating notes for Jenkins result {}: {}", id, e.getMessage());
+            throw new RuntimeException("Failed to update notes", e);
+        }
+    }
+
+    public JenkinsResult assignTestersToJenkinsResult(Long id, Long automationTesterId, Long manualTesterId) {
+        try {
+            Optional<JenkinsResult> optionalResult = jenkinsResultRepository.findById(id);
+            if (optionalResult.isEmpty()) {
+                throw new RuntimeException("Jenkins result not found with id: " + id);
+            }
+
+            JenkinsResult result = optionalResult.get();
+
+            if (automationTesterId != null) {
+                Tester automationTester = testerService.findTesterById(automationTesterId);
+                result.setAutomationTester(automationTester);
+            }
+
+            if (manualTesterId != null) {
+                Tester manualTester = testerService.findTesterById(manualTesterId);
+                result.setManualTester(manualTester);
+            }
+
+            calculateAndSetPassPercentage(result);
+            return jenkinsResultRepository.save(result);
+        }
+        catch (Exception e) {
+            log.error("Error assigning testers to Jenkins result {}: {}", id, e.getMessage());
+            throw new RuntimeException("Failed to assign testers", e);
+        }
+    }
+
+    public JenkinsResult saveAllJenkinsResultData(Long id, String notes, Long automationTesterId, Long manualTesterId, Long projectId) {
+        try {
+            Optional<JenkinsResult> optionalResult = jenkinsResultRepository.findById(id);
+            if (optionalResult.isEmpty()) {
+                throw new RuntimeException("Jenkins result not found with id: " + id);
+            }
+
+            JenkinsResult result = optionalResult.get();
+
+            // Update notes if provided
+            if (notes != null) {
+                String safeNotes = notes.trim();
+                result.setBugsIdentified(safeNotes);
+                result.setFailureReasons(safeNotes);
+            }
+
+            // Update testers if provided
+            if (automationTesterId != null) {
+                Tester automationTester = testerService.findTesterById(automationTesterId);
+                result.setAutomationTester(automationTester);
+            }
+
+            if (manualTesterId != null) {
+                Tester manualTester = testerService.findTesterById(manualTesterId);
+                result.setManualTester(manualTester);
+            }
+
+            // Update project if provided
+            if (projectId != null) {
+                Project project = projectService.findProjectById(projectId);
+                result.setProject(project);
+            }
+
+            calculateAndSetPassPercentage(result);
+            return jenkinsResultRepository.save(result);
+        }
+        catch (Exception e) {
+            log.error("Error saving all data for Jenkins result {}: {}", id, e.getMessage());
+            throw new RuntimeException("Failed to save data", e);
+        }
+    }
+
+    private void calculateAndSetPassPercentage(JenkinsResult result) {
+        if (result.getTotalTests() != null && result.getTotalTests() > 0) {
+            int passedTests = result.getPassedTests() != null ? result.getPassedTests() : 0;
+            double percentage = ((double) passedTests / result.getTotalTests()) * 100;
+            result.setPassPercentage((int) Math.round(percentage));
+        }
+        else {
+            result.setPassPercentage(0);
         }
     }
 }

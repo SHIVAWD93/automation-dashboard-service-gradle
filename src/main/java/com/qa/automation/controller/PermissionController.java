@@ -12,13 +12,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/permission")
 @RequiredArgsConstructor
-public class PermissionController {
+public class PermissionController extends BaseController {
 
     private final PermissionService permissionService;
 
     @GetMapping
-    ResponseEntity<List<UserPermission>> getAllPermissions() {
-        return ResponseEntity.ok(permissionService.getAllPermissions());
+    public ResponseEntity<List<UserPermission>> getAllPermissions() {
+        return executeWithErrorHandling(
+                permissionService::getAllPermissions,
+                "fetch all permissions"
+        );
     }
 }
 

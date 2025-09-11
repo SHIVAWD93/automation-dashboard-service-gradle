@@ -75,4 +75,7 @@ public class ProjectService {
         return projectRepository.findByStatus(status);
     }
 
+    public Project findProjectById(Long id) {
+        return projectRepository.findById(id).orElse(null);
+    }
 }
