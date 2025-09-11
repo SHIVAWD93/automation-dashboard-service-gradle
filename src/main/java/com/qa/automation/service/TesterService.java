@@ -88,8 +88,22 @@ public class TesterService {
     public boolean deleteTester(Long id) {
         if (testerRepository.existsById(id)) {
             testerRepository.deleteById(id);
+
+            // Clean up associated profile image
+            Path imagePath = Paths.get("uploads", id + ".png");
+            try {
+                Files.deleteIfExists(imagePath);
+            }
+            catch (IOException e) {
+                // Log the failure but don't fail the delete operation
+                System.err.println("Failed to delete image for tester ID " + id + ": " + e.getMessage());
+            }
             return true;
         }
         return false;
+    }
+
+    public Tester findTesterById(Long id) {
+        return testerRepository.findById(id).orElse(null);
     }
 }
