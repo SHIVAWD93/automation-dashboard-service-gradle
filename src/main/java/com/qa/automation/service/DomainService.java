@@ -1,5 +1,6 @@
 package com.qa.automation.service;
 
+import com.qa.automation.exception.BusinessLogicException;
 import com.qa.automation.exception.ResourceNotFoundException;
 import com.qa.automation.model.Domain;
 import com.qa.automation.repository.DomainRepository;
@@ -25,7 +26,7 @@ public class DomainService {
     public Domain createDomain(Domain domain) {
         // Check if domain name already exists
         if (domainRepository.existsByName(domain.getName())) {
-            throw new ResourceNotFoundException("Domain with name '" + domain.getName() + "' already exists");
+            throw new BusinessLogicException("Domain with name '" + domain.getName() + "' already exists");
         }
         return domainRepository.save(domain);
     }
@@ -36,24 +37,26 @@ public class DomainService {
 
 
     public Domain updateDomain(Long id, Domain domain) {
-        if (domainRepository.existsById(id)) {
-            // Check if new name conflicts with existing domain (excluding current one)
-            Optional<Domain> existingDomain = domainRepository.findByName(domain.getName());
-            if (existingDomain.isPresent() && !existingDomain.get().getId().equals(id)) {
-                throw new RuntimeException("Domain with name '" + domain.getName() + "' already exists");
-            }
-            domain.setId(id);
-            return domainRepository.save(domain);
+        if (!domainRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Domain not found with ID: " + id);
         }
-        return null;
+        
+        // Check if new name conflicts with existing domain (excluding current one)
+        Optional<Domain> existingDomain = domainRepository.findByName(domain.getName());
+        if (existingDomain.isPresent() && !existingDomain.get().getId().equals(id)) {
+            throw new BusinessLogicException("Domain with name '" + domain.getName() + "' already exists");
+        }
+        
+        domain.setId(id);
+        return domainRepository.save(domain);
     }
 
     public boolean deleteDomain(Long id) {
-        if (domainRepository.existsById(id)) {
-            domainRepository.deleteById(id);
-            return true;
+        if (!domainRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Domain not found with ID: " + id);
         }
-        return false;
+        domainRepository.deleteById(id);
+        return true;
     }
 
     public List<Domain> getDomainsByStatus(String status) {

@@ -1,5 +1,6 @@
 package com.qa.automation.controller;
 
+import com.qa.automation.dto.ApiResponse;
 import com.qa.automation.model.UserPermission;
 import com.qa.automation.service.PermissionService;
 import java.util.List;
@@ -17,11 +18,10 @@ public class PermissionController extends BaseController {
     private final PermissionService permissionService;
 
     @GetMapping
-    public ResponseEntity<List<UserPermission>> getAllPermissions() {
-        return executeWithErrorHandling(
-                permissionService::getAllPermissions,
-                "fetch all permissions"
-        );
+    public ResponseEntity<ApiResponse<List<UserPermission>>> getAllPermissions() {
+        logger.info("Fetching all permissions");
+        List<UserPermission> permissions = permissionService.getAllPermissions();
+        return success(permissions, "Permissions retrieved successfully");
     }
 }
 
