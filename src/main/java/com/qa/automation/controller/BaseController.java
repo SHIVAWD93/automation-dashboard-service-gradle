@@ -1,11 +1,11 @@
 package com.qa.automation.controller;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Base controller providing common functionality for all controllers
@@ -18,9 +18,9 @@ public abstract class BaseController {
     /**
      * Execute an operation with standardized error handling and logging
      *
-     * @param operation   The operation to execute
+     * @param operation     The operation to execute
      * @param operationName Name of the operation for logging
-     * @param <T>         Return type
+     * @param <T>           Return type
      * @return ResponseEntity with result or error
      */
     protected <T> ResponseEntity<T> executeWithErrorHandling(
@@ -31,12 +31,10 @@ public abstract class BaseController {
             T result = operation.get();
             log.info("Successfully completed operation: {}", operationName);
             return ResponseEntity.ok(result);
-        }
-        catch (RuntimeException e) {
+        } catch (RuntimeException e) {
             log.warn("Business logic error in operation {}: {}", operationName, e.getMessage());
             return ResponseEntity.badRequest().build();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Error in operation {}: {}", operationName, e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
@@ -45,9 +43,9 @@ public abstract class BaseController {
     /**
      * Execute an operation that returns a boolean (typically delete operations)
      *
-     * @param operation   The operation to execute
+     * @param operation     The operation to execute
      * @param operationName Name of the operation for logging
-     * @param entityId    ID of the entity being operated on
+     * @param entityId      ID of the entity being operated on
      * @return ResponseEntity with appropriate status
      */
     protected ResponseEntity<Void> executeDeleteOperation(
@@ -63,8 +61,7 @@ public abstract class BaseController {
             }
             log.warn("Entity not found for delete operation: {} with ID: {}", operationName, entityId);
             return ResponseEntity.notFound().build();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Error in delete operation {} for ID {}: {}", operationName, entityId, e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
@@ -73,10 +70,10 @@ public abstract class BaseController {
     /**
      * Execute a create operation with standardized error handling
      *
-     * @param operation   The operation to execute
+     * @param operation     The operation to execute
      * @param operationName Name of the operation for logging
-     * @param entityName  Name of the entity being created
-     * @param <T>         Return type
+     * @param entityName    Name of the entity being created
+     * @param <T>           Return type
      * @return ResponseEntity with created entity or error
      */
     protected <T> ResponseEntity<T> executeCreateOperation(
@@ -88,12 +85,10 @@ public abstract class BaseController {
             T result = operation.get();
             log.info("Successfully created {}: {}", operationName, entityName);
             return ResponseEntity.status(HttpStatus.CREATED).body(result);
-        }
-        catch (RuntimeException e) {
+        } catch (RuntimeException e) {
             log.warn("Failed to create {}: {}", operationName, e.getMessage());
             return ResponseEntity.badRequest().build();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Error creating {}: {}", operationName, e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
@@ -102,10 +97,10 @@ public abstract class BaseController {
     /**
      * Execute an operation that may return null (typically get by ID operations)
      *
-     * @param operation   The operation to execute
+     * @param operation     The operation to execute
      * @param operationName Name of the operation for logging
-     * @param entityId    ID of the entity being retrieved
-     * @param <T>         Return type
+     * @param entityId      ID of the entity being retrieved
+     * @param <T>           Return type
      * @return ResponseEntity with entity or not found status
      */
     protected <T> ResponseEntity<T> executeGetByIdOperation(
@@ -120,8 +115,7 @@ public abstract class BaseController {
             }
             log.warn("{} not found with ID: {}", operationName, entityId);
             return ResponseEntity.notFound().build();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Error fetching {} by ID {}: {}", operationName, entityId, e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }

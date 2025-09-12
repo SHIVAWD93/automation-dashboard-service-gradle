@@ -1,30 +1,19 @@
 package com.qa.automation.controller;
 
-import com.qa.automation.model.CombinedSaveRequest;
-import com.qa.automation.model.JenkinsResult;
-import com.qa.automation.model.JenkinsTestCase;
-import com.qa.automation.model.Project;
-import com.qa.automation.model.Tester;
-import com.qa.automation.model.TesterAssignmentRequest;
+import com.qa.automation.model.*;
 import com.qa.automation.service.JenkinsService;
 import com.qa.automation.service.JenkinsTestNGService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/jenkins")
@@ -39,7 +28,6 @@ public class JenkinsController {
     private final JenkinsTestNGService jenkinsTestNGService;
 
 
-
     @GetMapping("/test-connection")
     public ResponseEntity<Map<String, Object>> testJenkinsConnection() {
         try {
@@ -50,8 +38,7 @@ public class JenkinsController {
             response.put("message", connected ? "Successfully connected to Jenkins" : "Failed to connect to Jenkins");
             log.info("Jenkins connection test result: {}", connected ? "SUCCESS" : "FAILED");
             return ResponseEntity.ok(response);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             log.error("Error testing Jenkins connection: {}", e.getMessage(), e);
             Map<String, Object> response = new HashMap<>();
             response.put("connected", false);
@@ -62,16 +49,10 @@ public class JenkinsController {
 
     @GetMapping("/results")
     public ResponseEntity<List<JenkinsResult>> getAllLatestResults() {
-        try {
-            log.info("Fetching all latest Jenkins results");
-            List<JenkinsResult> results = jenkinsService.getAllLatestResults();
-            log.info("Retrieved {} Jenkins results", results.size());
-            return ResponseEntity.ok(results);
-        }
-        catch (Exception e) {
-            log.error("Error fetching latest Jenkins results: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        log.info("Fetching all latest Jenkins results");
+        List<JenkinsResult> results = jenkinsService.getAllLatestResults();
+        log.info("Retrieved {} Jenkins results", results.size());
+        return ResponseEntity.ok(results);
     }
 
     @GetMapping("/results/filtered")
@@ -115,8 +96,7 @@ public class JenkinsController {
             }
 
             return ResponseEntity.ok(filteredResults);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -124,73 +104,43 @@ public class JenkinsController {
     // NEW: Get unique job frequencies for filter dropdown
     @GetMapping("/frequencies")
     public ResponseEntity<List<String>> getJobFrequencies() {
-        try {
-            List<String> frequencies = jenkinsService.getJobFrequencies();
-            return ResponseEntity.ok(frequencies);
-        }
-        catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        List<String> frequencies = jenkinsService.getJobFrequencies();
+        return ResponseEntity.ok(frequencies);
     }
 
     // NEW: Get projects that have Jenkins results for filter dropdown
     @GetMapping("/projects")
     public ResponseEntity<List<Project>> getProjectsWithJenkinsResults() {
-        try {
-            List<Project> projects = jenkinsService.getProjectsWithJenkinsResults();
-            return ResponseEntity.ok(projects);
-        }
-        catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        List<Project> projects = jenkinsService.getProjectsWithJenkinsResults();
+        return ResponseEntity.ok(projects);
     }
 
     // NEW: Get automation testers that have Jenkins results for filter dropdown
     @GetMapping("/automation-testers")
     public ResponseEntity<List<Tester>> getAutomationTestersWithJenkinsResults() {
-        try {
-            List<Tester> testers = jenkinsService.getAutomationTestersWithJenkinsResults();
-            return ResponseEntity.ok(testers);
-        }
-        catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        List<Tester> testers = jenkinsService.getAutomationTestersWithJenkinsResults();
+        return ResponseEntity.ok(testers);
     }
 
     @GetMapping("/results/{jobName}")
     public ResponseEntity<JenkinsResult> getLatestResultByJobName(@PathVariable String jobName) {
-        try {
-            JenkinsResult result = jenkinsService.getLatestResultByJobName(jobName);
-            if (result != null) {
-                return ResponseEntity.ok(result);
-            }
-            return ResponseEntity.notFound().build();
+        JenkinsResult result = jenkinsService.getLatestResultByJobName(jobName);
+        if (result != null) {
+            return ResponseEntity.ok(result);
         }
-        catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        return ResponseEntity.notFound().build();
     }
 
     @GetMapping("/results/{resultId}/testcases")
     public ResponseEntity<List<JenkinsTestCase>> getTestCasesByResultId(@PathVariable Long resultId) {
-        try {
-            List<JenkinsTestCase> testCases = jenkinsService.getTestCasesByResultId(resultId);
-            return ResponseEntity.ok(testCases);
-        }
-        catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        List<JenkinsTestCase> testCases = jenkinsService.getTestCasesByResultId(resultId);
+        return ResponseEntity.ok(testCases);
     }
 
     @GetMapping("/statistics")
     public ResponseEntity<Map<String, Object>> getJenkinsStatistics() {
-        try {
-            Map<String, Object> stats = jenkinsService.getJenkinsStatistics();
-            return ResponseEntity.ok(stats);
-        }
-        catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        Map<String, Object> stats = jenkinsService.getJenkinsStatistics();
+        return ResponseEntity.ok(stats);
     }
 
     @PostMapping("/sync")
@@ -200,8 +150,7 @@ public class JenkinsController {
             Map<String, String> response = new HashMap<>();
             response.put("message", "Jenkins jobs synced successfully");
             return ResponseEntity.ok(response);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             Map<String, String> response = new HashMap<>();
             response.put("error", "Failed to sync Jenkins jobs: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
@@ -215,8 +164,7 @@ public class JenkinsController {
             Map<String, String> response = new HashMap<>();
             response.put("message", "Job " + jobName + " synced successfully");
             return ResponseEntity.ok(response);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             Map<String, String> response = new HashMap<>();
             response.put("error", "Failed to sync job " + jobName + ": " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
@@ -229,8 +177,7 @@ public class JenkinsController {
         try {
             Map<String, Object> report = jenkinsTestNGService.generateTestNGReport();
             return ResponseEntity.ok(report);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("error", "Failed to generate TestNG report: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
@@ -244,8 +191,7 @@ public class JenkinsController {
         try {
             Map<String, Object> testCases = jenkinsTestNGService.getDetailedTestCases(jobName, buildNumber);
             return ResponseEntity.ok(testCases);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("error", "Failed to get detailed test cases: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
@@ -265,8 +211,7 @@ public class JenkinsController {
             response.put("message", "Sync completed and report generated successfully");
             response.put("report", report);
             return ResponseEntity.ok(response);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("error", "Failed to sync and generate report: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
@@ -282,11 +227,9 @@ public class JenkinsController {
             String notes = null;
             if (requestBody.containsKey("bugsIdentified")) {
                 notes = (String) requestBody.get("bugsIdentified");
-            }
-            else if (requestBody.containsKey("failureReasons")) {
+            } else if (requestBody.containsKey("failureReasons")) {
                 notes = (String) requestBody.get("failureReasons");
-            }
-            else if (requestBody.containsKey("notes")) {
+            } else if (requestBody.containsKey("notes")) {
                 notes = (String) requestBody.get("notes");
             }
 
@@ -301,14 +244,12 @@ public class JenkinsController {
 
             return ResponseEntity.ok(response);
 
-        }
-        catch (RuntimeException e) {
+        } catch (RuntimeException e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Failed to update notes: " + e.getMessage());
@@ -337,14 +278,12 @@ public class JenkinsController {
 
             return ResponseEntity.ok(response);
 
-        }
-        catch (RuntimeException e) {
+        } catch (RuntimeException e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Failed to assign testers: " + e.getMessage());
@@ -377,14 +316,12 @@ public class JenkinsController {
 
             return ResponseEntity.ok(response);
 
-        }
-        catch (RuntimeException e) {
+        } catch (RuntimeException e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Failed to save data: " + e.getMessage());
