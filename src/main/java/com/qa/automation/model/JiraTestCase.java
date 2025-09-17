@@ -69,6 +69,12 @@ public class JiraTestCase {
     @Column(name = "domain_mapped")
     private String domainMapped;
 
+    @Column(name = "test_type")
+    private String testType; // "UI" or "API"
+
+    @Column(name = "automation_tool")
+    private String automationTool; // "Selenium" or "Tosca"
+
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 

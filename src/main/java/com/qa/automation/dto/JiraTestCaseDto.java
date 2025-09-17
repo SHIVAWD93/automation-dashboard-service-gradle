@@ -24,6 +24,8 @@ public class JiraTestCaseDto {
     private Long projectId;
     private String projectName;
     private String domainMapped;
+    private String testType; // "UI" or "API"
+    private String automationTool; // "Selenium" or "Tosca"
     private String notes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

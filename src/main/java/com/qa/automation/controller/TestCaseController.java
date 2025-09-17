@@ -73,4 +73,22 @@ public class TestCaseController {
         return ResponseEntity.ok(testCases);
     }
 
+    @GetMapping("/test-type/{testType}")
+    public ResponseEntity<List<TestCase>> getTestCasesByTestType(@PathVariable String testType) {
+        List<TestCase> testCases = testCaseService.getTestCasesByTestType(testType);
+        return ResponseEntity.ok(testCases);
+    }
+
+    @GetMapping("/automation-tool/{automationTool}")
+    public ResponseEntity<List<TestCase>> getTestCasesByAutomationTool(@PathVariable String automationTool) {
+        List<TestCase> testCases = testCaseService.getTestCasesByAutomationTool(automationTool);
+        return ResponseEntity.ok(testCases);
+    }
+
+    @GetMapping("/project/{projectId}/test-type/{testType}")
+    public ResponseEntity<List<TestCase>> getTestCasesByProjectAndTestType(@PathVariable Long projectId, @PathVariable String testType) {
+        List<TestCase> testCases = testCaseService.getTestCasesByProjectAndTestType(projectId, testType);
+        return ResponseEntity.ok(testCases);
+    }
+
 }

@@ -29,4 +29,14 @@ public interface TestCaseRepository extends JpaRepository<TestCase, Long> {
     @Query("SELECT tc.status, COUNT(tc) FROM TestCase tc WHERE tc.project.domain.id = :domainId GROUP BY tc.status")
     List<Object[]> getTestCaseStatsByDomain(@Param("domainId") Long domainId);
 
+    // New methods for test type and automation tool filtering
+    @Query("SELECT tc FROM TestCase tc WHERE tc.testType = :testType")
+    List<TestCase> findByTestType(@Param("testType") String testType);
+
+    @Query("SELECT tc FROM TestCase tc WHERE tc.automationTool = :automationTool")
+    List<TestCase> findByAutomationTool(@Param("automationTool") String automationTool);
+
+    @Query("SELECT tc FROM TestCase tc WHERE tc.project.id = :projectId AND tc.testType = :testType")
+    List<TestCase> findByProjectIdAndTestType(@Param("projectId") Long projectId, @Param("testType") String testType);
+
 }

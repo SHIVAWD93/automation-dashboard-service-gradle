@@ -146,6 +146,18 @@ public class ManualPageService {
         stats.put("notAutomatable", testCases.stream().filter(tc -> tc.isNotAutomatable()).count());
         stats.put("pending", testCases.stream().filter(tc -> tc.isPending()).count());
 
+        // Test type breakdown
+        Map<String, Long> testTypeBreakdown = testCases.stream()
+                .filter(tc -> tc.getTestType() != null)
+                .collect(Collectors.groupingBy(JiraTestCase::getTestType, Collectors.counting()));
+        stats.put("testTypeBreakdown", testTypeBreakdown);
+
+        // Automation tool breakdown
+        Map<String, Long> automationToolBreakdown = testCases.stream()
+                .filter(tc -> tc.getAutomationTool() != null)
+                .collect(Collectors.groupingBy(JiraTestCase::getAutomationTool, Collectors.counting()));
+        stats.put("automationToolBreakdown", automationToolBreakdown);
+
         // Group by project
         Map<String, Map<String, Long>> projectStats = testCases.stream()
                 .filter(tc -> tc.getProject() != null)
@@ -235,6 +247,28 @@ public class ManualPageService {
         JiraTestCase savedTestCase = jiraTestCaseRepository.save(testCase);
         return convertTestCaseToDto(savedTestCase);
     }
+
+    /**
+     * Update test case test type and automation tool
+     */
+    public JiraTestCaseDto updateTestCaseTestTypeAndTool(Long testCaseId, String testType, String automationTool) {
+        logger.info("Updating test type and automation tool for test case {}: testType={}, automationTool={}",
+                testCaseId, testType, automationTool);
+
+        Optional<JiraTestCase> optionalTestCase = jiraTestCaseRepository.findById(testCaseId);
+        if (optionalTestCase.isEmpty()) {
+            throw new RuntimeException("Test case not found with id: " + testCaseId);
+        }
+
+        JiraTestCase testCase = optionalTestCase.get();
+        testCase.setTestType(testType);
+        testCase.setAutomationTool(automationTool);
+
+        JiraTestCase savedTestCase = jiraTestCaseRepository.saveAndFlush(testCase);
+        logger.info("Successfully saved test type and automation tool for test case {}", testCaseId);
+        return convertTestCaseToDto(savedTestCase);
+    }
+
     /**
      * Sync Jira issue with database
      */
@@ -452,6 +486,8 @@ public class ManualPageService {
             testCase.setStatus("Ready to Automate");
             testCase.setProject(jiraTestCase.getProject());
             testCase.setTester(jiraTestCase.getAssignedTester());
+            testCase.setTestType(jiraTestCase.getTestType());
+            testCase.setAutomationTool(jiraTestCase.getAutomationTool());
         }
 
         return testCaseService.createTestCase(testCase);
@@ -506,6 +542,8 @@ public class ManualPageService {
         dto.setAutomationStatus(testCase.getAutomationStatus());
         dto.setAssignedTesterId(testCase.getAssignedTesterId());
         dto.setDomainMapped(testCase.getDomainMapped());
+        dto.setTestType(testCase.getTestType());
+        dto.setAutomationTool(testCase.getAutomationTool());
         dto.setNotes(testCase.getNotes());
         dto.setCreatedAt(testCase.getCreatedAt());
         dto.setUpdatedAt(testCase.getUpdatedAt());

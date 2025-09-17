@@ -38,6 +38,12 @@ public class TestCase {
     @Column(nullable = false)
     private String status;
 
+    @Column(name = "test_type")
+    private String testType; // "UI" or "API"
+
+    @Column(name = "automation_tool")
+    private String automationTool; // "Selenium" or "Tosca"
+
     // Relationship to Project
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "project_id", nullable = false)
