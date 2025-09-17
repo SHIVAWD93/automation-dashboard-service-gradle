@@ -91,6 +91,24 @@ public class ManualPageController {
         return ResponseEntity.ok(updatedTestCase);
     }
 
+    @PutMapping("/test-cases/{testCaseId}/test-type-tool")
+    public ResponseEntity<JiraTestCaseDto> updateTestTypeAndTool(
+            @PathVariable("testCaseId") String testCaseIdStr,
+            @RequestBody Map<String, String> request) {
+        if (testCaseIdStr == null || testCaseIdStr.trim().isEmpty() || "null".equalsIgnoreCase(testCaseIdStr.trim())) {
+            logger.warn("Received null/empty testCaseId in path: {}", testCaseIdStr);
+            return ResponseEntity.badRequest().build();
+        }
+        Long testCaseId = Long.parseLong(testCaseIdStr.trim());
+        logger.info("Updating test type and automation tool for test case: {}", testCaseId);
+        JiraTestCaseDto updatedTestCase = manualPageService.updateTestCaseTestTypeAndTool(
+                testCaseId,
+                request.get("testType"),
+                request.get("automationTool")
+        );
+        return ResponseEntity.ok(updatedTestCase);
+    }
+
     @PutMapping("/test-cases/{testCaseId}/save")
     public ResponseEntity<JiraTestCaseDto> saveMappingAndFlags(
             @PathVariable("testCaseId") String testCaseIdStr,
@@ -104,6 +122,8 @@ public class ManualPageController {
         JiraTestCaseDto dto = manualPageService.mapTestCaseToProject(testCaseId, request.getProjectId(), request.getTesterId());
         // Then update flags
         dto = manualPageService.updateTestCaseAutomationFlags(testCaseId, request.isCanBeAutomated(), request.isCannotBeAutomated());
+        // Update test type and automation tool
+        dto = manualPageService.updateTestCaseTestTypeAndTool(testCaseId, request.getTestType(), request.getAutomationTool());
         return ResponseEntity.ok(dto);
     }
 

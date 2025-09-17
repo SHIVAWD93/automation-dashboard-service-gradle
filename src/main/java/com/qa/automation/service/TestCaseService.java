@@ -130,4 +130,16 @@ public class TestCaseService {
         return testCaseRepository.findByDomainId(domainId);
     }
 
+    public List<TestCase> getTestCasesByTestType(String testType) {
+        return testCaseRepository.findByTestType(testType);
+    }
+
+    public List<TestCase> getTestCasesByAutomationTool(String automationTool) {
+        return testCaseRepository.findByAutomationTool(automationTool);
+    }
+
+    public List<TestCase> getTestCasesByProjectAndTestType(Long projectId, String testType) {
+        return testCaseRepository.findByProjectIdAndTestType(projectId, testType);
+    }
+
 }

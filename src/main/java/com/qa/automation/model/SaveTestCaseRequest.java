@@ -8,5 +8,7 @@ public class SaveTestCaseRequest {
     private Long testerId;
     private boolean canBeAutomated;
     private boolean cannotBeAutomated;
+    private String testType; // "UI" or "API"
+    private String automationTool; // "Selenium" or "Tosca"
 
 }
