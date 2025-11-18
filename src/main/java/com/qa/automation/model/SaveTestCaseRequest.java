@@ -8,5 +8,8 @@ public class SaveTestCaseRequest {
     private Long testerId;
     private boolean canBeAutomated;
     private boolean cannotBeAutomated;
+    private Long manualTesterId;
+    private String testCaseType;
+    private String toolType;
 
 }

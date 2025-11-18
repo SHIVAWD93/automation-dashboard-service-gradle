@@ -1,11 +1,11 @@
 package com.qa.automation.controller;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 /**
  * Base controller providing common functionality for all controllers
@@ -31,10 +31,12 @@ public abstract class BaseController {
             T result = operation.get();
             log.info("Successfully completed operation: {}", operationName);
             return ResponseEntity.ok(result);
-        } catch (RuntimeException e) {
+        }
+        catch (RuntimeException e) {
             log.warn("Business logic error in operation {}: {}", operationName, e.getMessage());
             return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             log.error("Error in operation {}: {}", operationName, e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
@@ -61,7 +63,8 @@ public abstract class BaseController {
             }
             log.warn("Entity not found for delete operation: {} with ID: {}", operationName, entityId);
             return ResponseEntity.notFound().build();
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             log.error("Error in delete operation {} for ID {}: {}", operationName, entityId, e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
@@ -85,10 +88,12 @@ public abstract class BaseController {
             T result = operation.get();
             log.info("Successfully created {}: {}", operationName, entityName);
             return ResponseEntity.status(HttpStatus.CREATED).body(result);
-        } catch (RuntimeException e) {
+        }
+        catch (RuntimeException e) {
             log.warn("Failed to create {}: {}", operationName, e.getMessage());
             return ResponseEntity.badRequest().build();
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             log.error("Error creating {}: {}", operationName, e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
@@ -115,7 +120,8 @@ public abstract class BaseController {
             }
             log.warn("{} not found with ID: {}", operationName, entityId);
             return ResponseEntity.notFound().build();
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             log.error("Error fetching {} by ID {}: {}", operationName, entityId, e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }

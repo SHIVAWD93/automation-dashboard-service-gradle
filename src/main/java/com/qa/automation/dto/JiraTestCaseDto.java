@@ -27,6 +27,10 @@ public class JiraTestCaseDto {
     private String notes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String testCaseType; // "API" or "UI"
+    private String toolType; // "Selenium" or "Tosca"
+    private Long manualTesterId;
+    private String manualTesterName;
 
     public JiraTestCaseDto(String qtestTitle) {
         this.qtestTitle = qtestTitle;

@@ -668,6 +668,7 @@ public class JiraIntegrationService {
             }
         }
     }
+
     /**
      * Test connection to Jira
      */

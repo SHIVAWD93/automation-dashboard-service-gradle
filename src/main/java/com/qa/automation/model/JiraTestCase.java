@@ -66,6 +66,18 @@ public class JiraTestCase {
     @JsonIgnoreProperties("testCases")
     private Tester assignedTester;
 
+    // New fields for manual coverage context
+    @Column(name = "test_case_type")
+    private String testCaseType; // "API" or "UI"
+
+    @Column(name = "tool_type")
+    private String toolType; // "Selenium" or "Tosca"
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "manual_tester_id")
+    @JsonIgnoreProperties("testCases")
+    private Tester manualTester;
+
     @Column(name = "domain_mapped")
     private String domainMapped;
 

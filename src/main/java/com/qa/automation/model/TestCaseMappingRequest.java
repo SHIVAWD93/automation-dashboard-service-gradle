@@ -6,5 +6,8 @@ import lombok.Data;
 public class TestCaseMappingRequest {
     private Long projectId;
     private Long testerId;
+    private Long manualTesterId;
+    private String testCaseType;
+    private String toolType;
 }
 

@@ -44,6 +44,7 @@ public class DashboardService {
         stats.put("inProgressTestCases", testCaseRepository.countByStatus("In Progress"));
         stats.put("readyTestCases", testCaseRepository.countByStatus("Ready to Automate"));
         stats.put("completedTestCases", testCaseRepository.countByStatus("Completed"));
+        stats.put("cannotBeAutomated", testCaseRepository.countByStatus("Cannot be Automated"));
 
         return stats;
     }

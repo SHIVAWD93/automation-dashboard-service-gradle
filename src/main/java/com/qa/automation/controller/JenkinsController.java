@@ -1,19 +1,31 @@
 package com.qa.automation.controller;
 
-import com.qa.automation.model.*;
+import com.qa.automation.model.CombinedSaveRequest;
+import com.qa.automation.model.JenkinsResult;
+import com.qa.automation.model.JenkinsTestCase;
+import com.qa.automation.model.Project;
+import com.qa.automation.model.Tester;
+import com.qa.automation.model.TesterAssignmentRequest;
 import com.qa.automation.service.JenkinsService;
 import com.qa.automation.service.JenkinsTestNGService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/jenkins")
@@ -29,6 +41,8 @@ public class JenkinsController {
 
 
     @GetMapping("/test-connection")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read','" +
+            "automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<Map<String, Object>> testJenkinsConnection() {
         try {
             log.info("Testing Jenkins connection");
@@ -38,7 +52,8 @@ public class JenkinsController {
             response.put("message", connected ? "Successfully connected to Jenkins" : "Failed to connect to Jenkins");
             log.info("Jenkins connection test result: {}", connected ? "SUCCESS" : "FAILED");
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             log.error("Error testing Jenkins connection: {}", e.getMessage(), e);
             Map<String, Object> response = new HashMap<>();
             response.put("connected", false);
@@ -48,6 +63,8 @@ public class JenkinsController {
     }
 
     @GetMapping("/results")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<List<JenkinsResult>> getAllLatestResults() {
         log.info("Fetching all latest Jenkins results");
         List<JenkinsResult> results = jenkinsService.getAllLatestResults();
@@ -56,6 +73,8 @@ public class JenkinsController {
     }
 
     @GetMapping("/results/filtered")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<List<JenkinsResult>> getFilteredResults(
             @RequestParam(required = false) Long projectId,
             @RequestParam(required = false) Long automationTesterId,
@@ -96,13 +115,16 @@ public class JenkinsController {
             }
 
             return ResponseEntity.ok(filteredResults);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     // NEW: Get unique job frequencies for filter dropdown
     @GetMapping("/frequencies")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<List<String>> getJobFrequencies() {
         List<String> frequencies = jenkinsService.getJobFrequencies();
         return ResponseEntity.ok(frequencies);
@@ -110,6 +132,8 @@ public class JenkinsController {
 
     // NEW: Get projects that have Jenkins results for filter dropdown
     @GetMapping("/projects")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<List<Project>> getProjectsWithJenkinsResults() {
         List<Project> projects = jenkinsService.getProjectsWithJenkinsResults();
         return ResponseEntity.ok(projects);
@@ -117,12 +141,16 @@ public class JenkinsController {
 
     // NEW: Get automation testers that have Jenkins results for filter dropdown
     @GetMapping("/automation-testers")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<List<Tester>> getAutomationTestersWithJenkinsResults() {
         List<Tester> testers = jenkinsService.getAutomationTestersWithJenkinsResults();
         return ResponseEntity.ok(testers);
     }
 
     @GetMapping("/results/{jobName}")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<JenkinsResult> getLatestResultByJobName(@PathVariable String jobName) {
         JenkinsResult result = jenkinsService.getLatestResultByJobName(jobName);
         if (result != null) {
@@ -132,25 +160,32 @@ public class JenkinsController {
     }
 
     @GetMapping("/results/{resultId}/testcases")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<List<JenkinsTestCase>> getTestCasesByResultId(@PathVariable Long resultId) {
         List<JenkinsTestCase> testCases = jenkinsService.getTestCasesByResultId(resultId);
         return ResponseEntity.ok(testCases);
     }
 
     @GetMapping("/statistics")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<Map<String, Object>> getJenkinsStatistics() {
         Map<String, Object> stats = jenkinsService.getJenkinsStatistics();
         return ResponseEntity.ok(stats);
     }
 
     @PostMapping("/sync")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<Map<String, String>> syncAllJobs() {
         try {
             jenkinsService.syncAllJobsFromJenkins();
             Map<String, String> response = new HashMap<>();
             response.put("message", "Jenkins jobs synced successfully");
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             Map<String, String> response = new HashMap<>();
             response.put("error", "Failed to sync Jenkins jobs: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
@@ -158,13 +193,16 @@ public class JenkinsController {
     }
 
     @PostMapping("/sync/{jobName}")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<Map<String, String>> syncJobResult(@PathVariable String jobName) {
         try {
             jenkinsService.syncJobResultFromJenkins(jobName);
             Map<String, String> response = new HashMap<>();
             response.put("message", "Job " + jobName + " synced successfully");
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             Map<String, String> response = new HashMap<>();
             response.put("error", "Failed to sync job " + jobName + ": " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
@@ -173,11 +211,14 @@ public class JenkinsController {
 
     // TestNG specific endpoints
     @GetMapping("/testng/report")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<Map<String, Object>> generateTestNGReport() {
         try {
             Map<String, Object> report = jenkinsTestNGService.generateTestNGReport();
             return ResponseEntity.ok(report);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("error", "Failed to generate TestNG report: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
@@ -185,13 +226,16 @@ public class JenkinsController {
     }
 
     @GetMapping("/testng/{jobName}/{buildNumber}/testcases")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<Map<String, Object>> getDetailedTestCases(
             @PathVariable String jobName,
             @PathVariable String buildNumber) {
         try {
             Map<String, Object> testCases = jenkinsTestNGService.getDetailedTestCases(jobName, buildNumber);
             return ResponseEntity.ok(testCases);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("error", "Failed to get detailed test cases: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
@@ -199,6 +243,8 @@ public class JenkinsController {
     }
 
     @PostMapping("/testng/sync-and-report")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<Map<String, Object>> syncAndGenerateReport() {
         try {
             // First sync all jobs
@@ -211,7 +257,8 @@ public class JenkinsController {
             response.put("message", "Sync completed and report generated successfully");
             response.put("report", report);
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("error", "Failed to sync and generate report: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
@@ -219,6 +266,8 @@ public class JenkinsController {
     }
 
     @PutMapping("/results/{id}/notes")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<Map<String, Object>> updateJenkinsResultNotes(
             @PathVariable Long id,
             @RequestBody Map<String, Object> requestBody) {
@@ -227,9 +276,11 @@ public class JenkinsController {
             String notes = null;
             if (requestBody.containsKey("bugsIdentified")) {
                 notes = (String) requestBody.get("bugsIdentified");
-            } else if (requestBody.containsKey("failureReasons")) {
+            }
+            else if (requestBody.containsKey("failureReasons")) {
                 notes = (String) requestBody.get("failureReasons");
-            } else if (requestBody.containsKey("notes")) {
+            }
+            else if (requestBody.containsKey("notes")) {
                 notes = (String) requestBody.get("notes");
             }
 
@@ -244,12 +295,14 @@ public class JenkinsController {
 
             return ResponseEntity.ok(response);
 
-        } catch (RuntimeException e) {
+        }
+        catch (RuntimeException e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Failed to update notes: " + e.getMessage());
@@ -258,6 +311,8 @@ public class JenkinsController {
     }
 
     @PostMapping("/results/{id}/testers")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<Map<String, Object>> assignTestersToJenkinsResult(
             @PathVariable Long id,
             @RequestBody TesterAssignmentRequest request) {
@@ -278,12 +333,14 @@ public class JenkinsController {
 
             return ResponseEntity.ok(response);
 
-        } catch (RuntimeException e) {
+        }
+        catch (RuntimeException e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Failed to assign testers: " + e.getMessage());
@@ -292,6 +349,8 @@ public class JenkinsController {
     }
 
     @PostMapping("/results/{id}/save-all")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<Map<String, Object>> saveAllData(
             @PathVariable Long id,
             @RequestBody CombinedSaveRequest request) {
@@ -316,12 +375,14 @@ public class JenkinsController {
 
             return ResponseEntity.ok(response);
 
-        } catch (RuntimeException e) {
+        }
+        catch (RuntimeException e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "Failed to save data: " + e.getMessage());

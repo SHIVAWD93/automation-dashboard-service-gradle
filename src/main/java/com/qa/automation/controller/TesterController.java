@@ -1,14 +1,24 @@
 package com.qa.automation.controller;
 
+import com.qa.automation.dto.TesterDto;
 import com.qa.automation.model.Tester;
 import com.qa.automation.service.TesterService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/testers")
@@ -18,6 +28,8 @@ public class TesterController extends BaseController {
     private final TesterService testerService;
 
     @GetMapping
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<List<Tester>> getAllTesters() {
         return executeWithErrorHandling(
                 testerService::getAllTesters,
@@ -26,6 +38,7 @@ public class TesterController extends BaseController {
     }
 
     @PostMapping
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.admin'})")
     public ResponseEntity<Tester> createTester(@RequestBody Tester tester) {
         return executeCreateOperation(
                 () -> testerService.createTester(tester),
@@ -35,8 +48,9 @@ public class TesterController extends BaseController {
     }
 
     @PostMapping(value = "with-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.admin'})")
     public ResponseEntity<Tester> createTesterWithImage(
-            @ModelAttribute Tester tester,
+            @ModelAttribute TesterDto tester,
             @RequestParam("profileImage") MultipartFile profileImage) {
         return executeCreateOperation(
                 () -> testerService.createTester(tester, profileImage),
@@ -47,6 +61,8 @@ public class TesterController extends BaseController {
 
 
     @GetMapping("/{id}")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<Tester> getTesterById(@PathVariable Long id) {
         return executeGetByIdOperation(
                 () -> testerService.getTesterById(id),
@@ -56,6 +72,7 @@ public class TesterController extends BaseController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.admin'})")
     public ResponseEntity<Tester> updateTester(@PathVariable Long id, @RequestBody Tester tester) {
         return executeGetByIdOperation(
                 () -> testerService.updateTester(id, tester),
@@ -65,6 +82,7 @@ public class TesterController extends BaseController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.admin'})")
     public ResponseEntity<Void> deleteTester(@PathVariable Long id) {
         return executeDeleteOperation(
                 () -> testerService.deleteTester(id),

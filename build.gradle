@@ -36,11 +36,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
-    //winsupply dependencies
-//    implementation 'com.winsupply:win-cors-config:1.0.0'
-
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-
     // Database
     runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 
@@ -55,10 +50,12 @@ dependencies {
     implementation 'commons-fileupload:commons-fileupload:1.5'
     implementation 'commons-io:commons-io:2.11.0'
 
-    // Security / JWT
-    implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
-    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+    // winsupply dependencies.
+    implementation 'com.winsupply:win-webauth-plugin:4.0.7'
+    implementation 'com.winsupply:win-cors-config:1.1.0'
+    implementation 'com.winsupply:ams-helper:1.0.2'
+    implementation 'com.winsupply:w2020-service-jdk17:0.8.3-SNAPSHOT'
+
 
     // HTTP client
     implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'

@@ -1,9 +1,8 @@
 package com.qa.automation.service;
 
+import com.qa.automation.dto.TesterDto;
 import com.qa.automation.model.Tester;
 import com.qa.automation.repository.TesterRepository;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,16 +23,13 @@ public class TesterService {
         List<Tester> testers = testerRepository.findAll();
 
         testers.forEach(tester -> {
-            Path imagePath = Paths.get("uploads", tester.getId() + ".png");
-            try {
-                byte[] imageBytes = Files.readAllBytes(imagePath);
+            byte[] imageBytes = tester.getProfileImage();
+            if (imageBytes != null && imageBytes.length > 0) {
                 String base64Image = Base64.getEncoder().encodeToString(imageBytes);
-                tester.setProfileImageUrl(base64Image);  // base64 string instead of URL
+                tester.setProfileImageUrl(base64Image); // temporarily reuse this field
             }
-            catch (IOException e) {
-                // If file not found or error, you can either set null or some default
-                tester.setProfileImageUrl(null);
-                // optionally log error here
+            else {
+                tester.setProfileImageUrl(null); // or default base64 if you have one
             }
         });
 
@@ -45,25 +41,21 @@ public class TesterService {
         return testerRepository.save(tester);
     }
 
-    public Tester createTester(Tester tester, MultipartFile imageFile) {
-        if (tester.getExperience() == null) {
-            tester.setExperience(0);
-        }
+    public Tester createTester(TesterDto dto, MultipartFile imageFile) {
+        Tester tester = new Tester();
+        tester.setName(dto.getName());
+        tester.setRole(dto.getRole());
+        tester.setGender(dto.getGender());
+        tester.setExperience(dto.getExperience() != null ? dto.getExperience() : 0);
         Tester savedTester = testerRepository.save(tester);
         if (!imageFile.isEmpty()) {
             // Prepare file path
-            String uploadDir = "uploads/";
-            String fileName = savedTester.getId() + ".png";
-            File file = new File(uploadDir + fileName);
-            file.getParentFile().mkdirs(); // ensure directory exists
-            try (FileOutputStream fos = new FileOutputStream(file)) {
-                fos.write(imageFile.getBytes());
+            try {
+                savedTester.setProfileImage(imageFile.getBytes());
             }
             catch (IOException e) {
                 throw new RuntimeException("Failed to save image", e);
             }
-            // Save image path to DB
-            savedTester.setProfileImageUrl(uploadDir + fileName);
         }
         return testerRepository.save(savedTester);
     }

@@ -98,6 +98,7 @@ public class DataInitializationService {
         return projectRepository.findByName("Default Project")
                 .orElseThrow(() -> new ResourceNotFoundException("Default project not found"));
     }
+
     /**
      * Get default tester for fallback scenarios
      */

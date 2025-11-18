@@ -1,24 +1,37 @@
 package com.qa.automation.controller;
 
-import com.qa.automation.config.JiraConfig;
 import com.qa.automation.dto.JiraIssueDto;
 import com.qa.automation.dto.JiraTestCaseDto;
-import com.qa.automation.model.*;
+import com.qa.automation.model.AutomationFlagsRequest;
+import com.qa.automation.model.Domain;
+import com.qa.automation.model.GlobalKeywordSearchRequest;
+import com.qa.automation.model.KeywordSearchRequest;
+import com.qa.automation.model.Project;
+import com.qa.automation.model.SaveTestCaseRequest;
+import com.qa.automation.model.TestCaseMappingRequest;
+import com.qa.automation.model.Tester;
 import com.qa.automation.service.JiraIntegrationService;
 import com.qa.automation.service.ManualPageService;
-import com.qa.automation.service.QTestService;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/manual-page")
 @RequiredArgsConstructor
+@PreAuthorize(value = "@amsHelper.hasGlobalPermission('automation-dashboard.read')")
 public class ManualPageController {
 
     private static final Logger logger = LoggerFactory.getLogger(ManualPageController.class);
@@ -29,13 +42,9 @@ public class ManualPageController {
 
     private final JiraIntegrationService jiraIntegrationService;
 
-
-    private final QTestService qTestService;
-
-
-    private final JiraConfig jiraConfig;
-
     @GetMapping("/sprints")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<List<Map<String, Object>>> getAvailableSprints(
             @RequestParam(required = false) String jiraProjectKey,
             @RequestParam(required = false) String jiraBoardId) {
@@ -43,13 +52,16 @@ public class ManualPageController {
             logger.info("Fetching available sprints (Project: {}, Board: {})", jiraProjectKey, jiraBoardId);
             List<Map<String, Object>> sprints = manualPageService.getAvailableSprints(jiraProjectKey, jiraBoardId);
             return ResponseEntity.ok(sprints);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             logger.error("Error fetching sprints: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }
 
     @PostMapping("/sprints/{sprintId}/sync")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<List<JiraIssueDto>> syncSprintIssues(
             @PathVariable String sprintId,
             @RequestParam(required = false) String jiraProjectKey,
@@ -60,13 +72,16 @@ public class ManualPageController {
             List<JiraIssueDto> issues = manualPageService.fetchAndSyncSprintIssues(
                     sprintId, jiraProjectKey, jiraBoardId);
             return ResponseEntity.ok(issues);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             logger.error("Error fetching sprints: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }
 
     @GetMapping("/sprints/{sprintId}/issues")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<List<JiraIssueDto>> getSprintIssues(@PathVariable String sprintId) {
         logger.info("Getting issues for sprint: {}", sprintId);
         List<JiraIssueDto> issues = manualPageService.getSprintIssues(sprintId);
@@ -74,6 +89,7 @@ public class ManualPageController {
     }
 
     @PutMapping("/test-cases/{testCaseId}/automation-flags")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<JiraTestCaseDto> updateAutomationFlags(
             @PathVariable("testCaseId") String testCaseIdStr,
             @RequestBody AutomationFlagsRequest request) {
@@ -92,6 +108,7 @@ public class ManualPageController {
     }
 
     @PutMapping("/test-cases/{testCaseId}/save")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<JiraTestCaseDto> saveMappingAndFlags(
             @PathVariable("testCaseId") String testCaseIdStr,
             @RequestBody SaveTestCaseRequest request) {
@@ -100,14 +117,22 @@ public class ManualPageController {
         }
         Long testCaseId = Long.parseLong(testCaseIdStr.trim());
 
-        // First map project/tester if provided
-        JiraTestCaseDto dto = manualPageService.mapTestCaseToProject(testCaseId, request.getProjectId(), request.getTesterId());
+        // First map project/tester/manual plus type/tool if provided
+        JiraTestCaseDto dto = manualPageService.mapTestCaseToProject(
+                testCaseId,
+                request.getProjectId(),
+                request.getTesterId(),
+                request.getManualTesterId(),
+                request.getTestCaseType(),
+                request.getToolType()
+        );
         // Then update flags
         dto = manualPageService.updateTestCaseAutomationFlags(testCaseId, request.isCanBeAutomated(), request.isCannotBeAutomated());
         return ResponseEntity.ok(dto);
     }
 
     @PutMapping("/test-cases/{testCaseId}/mapping")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<JiraTestCaseDto> mapTestCase(
             @PathVariable Long testCaseId,
             @RequestBody TestCaseMappingRequest request) {
@@ -116,12 +141,17 @@ public class ManualPageController {
         JiraTestCaseDto updatedTestCase = manualPageService.mapTestCaseToProject(
                 testCaseId,
                 request.getProjectId(),
-                request.getTesterId()
+                request.getTesterId(),
+                request.getManualTesterId(),
+                request.getTestCaseType(),
+                request.getToolType()
         );
         return ResponseEntity.ok(updatedTestCase);
     }
 
     @PostMapping("/issues/{jiraKey}/keyword-search")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<JiraIssueDto> searchKeywordInComments(
             @PathVariable String jiraKey,
             @RequestBody KeywordSearchRequest request) {
@@ -131,6 +161,8 @@ public class ManualPageController {
     }
 
     @PostMapping("/global-keyword-search")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<Map<String, Object>> globalKeywordSearch(
             @RequestBody GlobalKeywordSearchRequest request) {
         logger.info("Performing global keyword search for '{}' in project: {} sprint: {}",
@@ -141,6 +173,8 @@ public class ManualPageController {
     }
 
     @GetMapping("/sprints/{sprintId}/statistics")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<Map<String, Object>> getSprintStatistics(@PathVariable String sprintId) {
         logger.info("Getting automation statistics for sprint: {}", sprintId);
         Map<String, Object> statistics = manualPageService.getSprintAutomationStatistics(sprintId);
@@ -148,6 +182,8 @@ public class ManualPageController {
     }
 
     @GetMapping("/projects")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<List<Project>> getAllProjects() {
         logger.info("Getting all projects for mapping");
         List<Project> projects = manualPageService.getAllProjects();
@@ -155,6 +191,8 @@ public class ManualPageController {
     }
 
     @GetMapping("/domains")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<List<Domain>> getAllDomains() {
         logger.info("Getting all domains for filtering");
         List<Domain> domains = manualPageService.getAllDomains();
@@ -162,6 +200,8 @@ public class ManualPageController {
     }
 
     @GetMapping("/testers")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<List<Tester>> getAllTesters() {
         logger.info("Getting all testers for assignment");
         List<Tester> testers = manualPageService.getAllTesters();
@@ -169,6 +209,8 @@ public class ManualPageController {
     }
 
     @GetMapping("/test-connection")
+    @PreAuthorize(value = "@amsHelper.hasGlobalPermission(new String[]{'automation-dashboard.read'," +
+            "'automation-dashboard.write','automation-dashboard.admin'})")
     public ResponseEntity<Map<String, Object>> testConnection() {
         try {
             logger.info("Testing Jira connection");
@@ -178,7 +220,8 @@ public class ManualPageController {
                     "message", isConnected ? "Successfully connected to Jira" : "Failed to connect to Jira"
             );
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             logger.error("Error testing connection: {}", e.getMessage(), e);
             Map<String, Object> response = Map.of(
                     "connected", false,

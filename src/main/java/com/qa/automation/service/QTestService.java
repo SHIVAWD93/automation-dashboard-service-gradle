@@ -310,6 +310,7 @@ public class QTestService {
         authenticationFailed = false;
         return loginToQTest();
     }
+
     /**
      * Check if QTest is authenticated
      */

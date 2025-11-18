@@ -54,6 +54,18 @@ public class TestCase {
     @JsonIgnoreProperties("testCases")
     private Tester tester;
 
+    // New fields
+    @Column(name = "test_case_type")
+    private String testCaseType; // "API" or "UI"
+
+    @Column(name = "tool_type")
+    private String toolType; // "Selenium" or "Tosca"
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "manual_tester_id")
+    @JsonIgnoreProperties("testCases")
+    private Tester manualTester;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -62,13 +74,21 @@ public class TestCase {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
+        if (createdAt == null) {
+            createdAt = now;
+        }
+        updatedAt = now;
     }
 
     @PreUpdate
     protected void onUpdate() {
+        // Only update the updatedAt field, never touch createdAt
         updatedAt = LocalDateTime.now();
+        // Ensure createdAt is never null during updates
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now(); // Fallback, though this shouldn't happen
+        }
     }
 
     public Long getProjectId() {
@@ -94,6 +114,18 @@ public class TestCase {
                 this.tester = new Tester();
             }
             this.tester.setId(testerId);
+        }
+    }
+    public Long getManualTesterId() {
+        return manualTester != null ? manualTester.getId() : null;
+    }
+
+    public void setManualTesterId(Long manualTesterId) {
+        if (manualTesterId != null) {
+            if (this.manualTester == null) {
+                this.manualTester = new Tester();
+            }
+            this.manualTester.setId(manualTesterId);
         }
     }
 
