@@ -100,7 +100,7 @@ public class JenkinsController {
                             return false;
                         }
                         // Build status filter
-                        if (buildStatus != null && !buildStatus.isEmpty() && !buildStatus.equalsIgnoreCase(result.getBuildStatus())) {
+                        if (buildStatus != null && !buildStatus.isEmpty() && !buildStatus.equalsIgnoreCase(String.valueOf(result.getBuildStatus()))) {
                             return false;
                         }
                         return true;

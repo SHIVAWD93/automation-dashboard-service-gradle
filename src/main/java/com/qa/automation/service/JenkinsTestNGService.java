@@ -2,6 +2,7 @@ package com.qa.automation.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.qa.automation.model.BuildStatus;
 import com.qa.automation.model.JenkinsResult;
 import com.qa.automation.model.JenkinsTestCase;
 import com.qa.automation.repository.JenkinsResultRepository;
@@ -39,6 +40,7 @@ public class JenkinsTestNGService {
     private final JenkinsTestCaseRepository jenkinsTestCaseRepository;
 
     private final TestNGXMLParserService testNGXMLParserService;
+    private final LookupService lookupService;
 
     @Value("${jenkins.url:}")
     private String jenkinsUrl;
@@ -133,14 +135,14 @@ public class JenkinsTestNGService {
 
             int latestBuildNumber = latestBuild.get("number").asInt();
             String executionDate = formatTimestamp(latestBuild.get("timestamp").asLong());
-            String buildStatus = latestBuild.has("result") && !latestBuild.get("result").isNull() ?
+            String buildStatusCode = latestBuild.has("result") && !latestBuild.get("result").isNull() ?
                     latestBuild.get("result").asText() : "IN_PROGRESS";
 
             JsonNode testResults = fetchTestNGResults(jobName, latestBuildNumber);
             Map<String, Object> jobReport = new HashMap<>();
             jobReport.put("jobName", jobName);
             jobReport.put("buildNumber", latestBuildNumber);
-            jobReport.put("buildStatus", buildStatus);
+            jobReport.put("buildStatus", buildStatusCode);
             jobReport.put("executionDate", executionDate);
 
             if (testResults != null) {
@@ -153,6 +155,8 @@ public class JenkinsTestNGService {
                 jobReport.put("passCount", Math.max(0, passCount));
                 jobReport.put("failCount", failCount);
                 jobReport.put("skipCount", skipCount);
+                BuildStatus buildStatus = lookupService.findOrCreateBuildStatus(buildStatusCode);
+
 
                 updateDatabaseRecord(jobName, latestBuildNumber, buildStatus,
                         totalCount, passCount, failCount, skipCount, latestBuild);
@@ -172,7 +176,7 @@ public class JenkinsTestNGService {
         }
     }
 
-    private void updateDatabaseRecord(String jobName, int buildNumber, String buildStatus,
+    private void updateDatabaseRecord(String jobName, int buildNumber, BuildStatus buildStatus,
                                       int totalTests, int passCount, int failCount, int skipCount,
                                       JsonNode buildInfo) {
         try {

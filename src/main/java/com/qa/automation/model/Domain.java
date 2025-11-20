@@ -1,19 +1,9 @@
 package com.qa.automation.model;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
-import lombok.Data;
 
 @Entity
 @Table(name = "domains")
@@ -30,8 +20,10 @@ public class Domain {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false)
-    private String status;
+    // Updated to use WorkflowStatus lookup table
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "status_id")
+    private WorkflowStatus status;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -53,4 +45,8 @@ public class Domain {
         updatedAt = LocalDateTime.now();
     }
 
+    // Backward compatibility - String getter/setter
+    public String getStatusCode() {
+        return status != null ? status.getCode() : null;
+    }
 }

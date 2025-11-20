@@ -1,19 +1,9 @@
 package com.qa.automation.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import jakarta.persistence.*;
 import lombok.Data;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "projects")
@@ -30,15 +20,16 @@ public class Project {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false)
-    private String status;
+    // Updated to use WorkflowStatus lookup table
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "status_id")
+    private WorkflowStatus status;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "domain_id", nullable = false)
     @JsonIgnoreProperties("projects")
     private Domain domain;
 
-    // NEW: Jira configuration fields
     @Column(name = "jira_project_key")
     private String jiraProjectKey;
 
@@ -51,18 +42,16 @@ public class Project {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Constructors
-    public Project() {
-    }
+    public Project() {}
 
-    public Project(String name, String description, String status, Domain domain) {
+    public Project(String name, String description, WorkflowStatus status, Domain domain) {
         this.name = name;
         this.description = description;
         this.status = status;
         this.domain = domain;
     }
 
-    public Project(String name, String description, String status, Domain domain,
+    public Project(String name, String description, WorkflowStatus status, Domain domain,
                    String jiraProjectKey, String jiraBoardId) {
         this(name, description, status, domain);
         this.jiraProjectKey = jiraProjectKey;
@@ -80,4 +69,8 @@ public class Project {
         updatedAt = LocalDateTime.now();
     }
 
+    // Backward compatibility - String getter/setter
+    public String getStatusCode() {
+        return status != null ? status.getCode() : null;
+    }
 }

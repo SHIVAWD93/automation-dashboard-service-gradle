@@ -1,16 +1,8 @@
 package com.qa.automation.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import jakarta.persistence.*;
 import lombok.Data;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "testers")
@@ -24,8 +16,10 @@ public class Tester {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
-    private String role;
+    // Updated to use Role lookup table
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id")
+    private Role role;
 
     @Column(nullable = false)
     private String gender;
@@ -40,18 +34,15 @@ public class Tester {
     @Column(name = "profile_image", columnDefinition = "LONGBLOB")
     private byte[] profileImage;
 
-
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Constructors
-    public Tester() {
-    }
+    public Tester() {}
 
-    public Tester(String name, String role, String gender, Integer experience) {
+    public Tester(String name, Role role, String gender, Integer experience) {
         this.name = name;
         this.role = role;
         this.gender = gender;
@@ -69,4 +60,8 @@ public class Tester {
         updatedAt = LocalDateTime.now();
     }
 
+    // Backward compatibility - String getter/setter
+    public String getRoleCode() {
+        return role != null ? role.getCode() : null;
+    }
 }

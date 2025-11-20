@@ -1,22 +1,10 @@
 package com.qa.automation.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
-import lombok.Data;
 
 @Entity
 @Table(name = "jenkins_results")
@@ -33,8 +21,10 @@ public class JenkinsResult {
     @Column(name = "build_number", nullable = false)
     private String buildNumber;
 
-    @Column(name = "build_status")
-    private String buildStatus; // SUCCESS, FAILURE, UNSTABLE, ABORTED
+    // Updated to use BuildStatus lookup table
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "build_status_id")
+    private BuildStatus buildStatus;
 
     @Column(name = "build_url")
     private String buildUrl;
@@ -60,22 +50,18 @@ public class JenkinsResult {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // ENHANCEMENT: Added pass percentage field
     @Column(name = "pass_percentage")
     private Integer passPercentage;
 
-    // ENHANCEMENT: Added notes fields for bugs and failure reasons
     @Column(name = "bugs_identified", columnDefinition = "TEXT")
     private String bugsIdentified;
 
     @Column(name = "failure_reasons", columnDefinition = "TEXT")
     private String failureReasons;
 
-    // NEW: Added job frequency field
     @Column(name = "job_frequency")
     private String jobFrequency;
 
-    // ENHANCEMENT: Added tester relationships
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "automation_tester_id")
     private Tester automationTester;
@@ -84,7 +70,6 @@ public class JenkinsResult {
     @JoinColumn(name = "manual_tester_id")
     private Tester manualTester;
 
-    // EXISTING: Project relationship
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "project_id")
     private Project project;
@@ -92,7 +77,6 @@ public class JenkinsResult {
     @OneToMany(mappedBy = "jenkinsResult", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnoreProperties("jenkinsResult")
     private List<JenkinsTestCase> testCases;
-
 
     @PrePersist
     protected void onCreate() {
@@ -115,27 +99,25 @@ public class JenkinsResult {
         }
 
         String lowerJobName = jobName.toLowerCase();
-
         if (lowerJobName.contains("hourly")) {
             this.jobFrequency = "Hourly";
-        }
-        else if (lowerJobName.contains("daily") || lowerJobName.contains("nightly")) {
+        } else if (lowerJobName.contains("daily") || lowerJobName.contains("nightly")) {
             this.jobFrequency = "Daily";
-        }
-        else if (lowerJobName.contains("weekly")) {
+        } else if (lowerJobName.contains("weekly")) {
             this.jobFrequency = "Weekly";
-        }
-        else if (lowerJobName.contains("monthly")) {
+        } else if (lowerJobName.contains("monthly")) {
             this.jobFrequency = "Monthly";
-        }
-        else if (lowerJobName.contains("manual") || lowerJobName.contains("ondemand") || lowerJobName.contains("trigger")) {
+        } else if (lowerJobName.contains("manual") || lowerJobName.contains("ondemand") || lowerJobName.contains("trigger")) {
             this.jobFrequency = "On Demand";
-        }
-        else if (lowerJobName.contains("continuous") || lowerJobName.contains("ci") || lowerJobName.contains("commit")) {
+        } else if (lowerJobName.contains("continuous") || lowerJobName.contains("ci") || lowerJobName.contains("commit")) {
             this.jobFrequency = "Continuous";
-        }
-        else {
+        } else {
             this.jobFrequency = "Unknown";
         }
+    }
+
+    // Backward compatibility - String getter/setter
+    public String getBuildStatusCode() {
+        return buildStatus != null ? buildStatus.getCode() : null;
     }
 }

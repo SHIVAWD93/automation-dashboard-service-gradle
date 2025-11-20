@@ -4,12 +4,7 @@ import com.qa.automation.config.JiraConfig;
 import com.qa.automation.dto.JiraIssueDto;
 import com.qa.automation.dto.JiraTestCaseDto;
 import com.qa.automation.exception.ResourceNotFoundException;
-import com.qa.automation.model.Domain;
-import com.qa.automation.model.JiraIssue;
-import com.qa.automation.model.JiraTestCase;
-import com.qa.automation.model.Project;
-import com.qa.automation.model.TestCase;
-import com.qa.automation.model.Tester;
+import com.qa.automation.model.*;
 import com.qa.automation.repository.DomainRepository;
 import com.qa.automation.repository.JiraIssueRepository;
 import com.qa.automation.repository.JiraTestCaseRepository;
@@ -38,7 +33,7 @@ public class ManualPageService {
 
 
     private final JiraIntegrationService jiraIntegrationService;
-
+    private final LookupService lookupService;
 
     private final TestCaseService testCaseService;
     private final JiraIssueRepository jiraIssueRepository;
@@ -87,10 +82,9 @@ public class ManualPageService {
     /**
      * Update test case automation flags
      */
-    public JiraTestCaseDto updateTestCaseAutomationFlags(Long testCaseId, boolean canBeAutomated, boolean cannotBeAutomated) {
-        logger.info("Updating automation flags for test case {}: canAutomate={}, cannotAutomate={}",
-                testCaseId, canBeAutomated, cannotBeAutomated);
-
+    public JiraTestCaseDto updateTestCaseAutomationFlags(Long testCaseId,
+                                                         boolean canBeAutomated,
+                                                         boolean cannotBeAutomated) {
         Optional<JiraTestCase> optionalTestCase = jiraTestCaseRepository.findById(testCaseId);
         if (optionalTestCase.isEmpty()) {
             throw new RuntimeException("Test case not found with id: " + testCaseId);
@@ -100,13 +94,12 @@ public class ManualPageService {
         testCase.setCanBeAutomated(canBeAutomated);
         testCase.setCannotBeAutomated(cannotBeAutomated);
 
-        // If marked as "Can be Automated", trigger the automation readiness flow
+        // NEW: Set automation status using lookup service
+        AutomationStatus status = lookupService.determineAutomationStatus(canBeAutomated, cannotBeAutomated);
+        testCase.setAutomationStatus(status);
+
         processAutomationReadiness(testCase, canBeAutomated);
-
-
-        // Use saveAndFlush to ensure immediate persistence
         JiraTestCase savedTestCase = jiraTestCaseRepository.saveAndFlush(testCase);
-        logger.info("Successfully saved automation flags for test case {}", testCaseId);
         return convertTestCaseToDto(savedTestCase);
     }
 
@@ -147,7 +140,7 @@ public class ManualPageService {
         stats.put("pending", testCases.stream().filter(tc -> tc.isPending()).count());
 
         // Group by project
-        Map<String, Map<String, Long>> projectStats = testCases.stream()
+        Map<String, Map<AutomationStatus, Long>> projectStats = testCases.stream()
                 .filter(tc -> tc.getProject() != null)
                 .collect(Collectors.groupingBy(
                         tc -> tc.getProject().getName(),
@@ -194,9 +187,8 @@ public class ManualPageService {
      * Map test case to project and domain
      */
     public JiraTestCaseDto mapTestCaseToProject(Long testCaseId, Long projectId,
-                                                Long testerId, Long manualTesterId, String testCaseType, String toolType) {
-        logger.info("Mapping test case {} to project {} and tester {}", testCaseId, projectId, testerId);
-
+                                                Long testerId, Long manualTesterId,
+                                                String testCaseTypeCode, String toolTypeCode) {
         Optional<JiraTestCase> optionalTestCase = jiraTestCaseRepository.findById(testCaseId);
         if (optionalTestCase.isEmpty()) {
             throw new RuntimeException("Test case not found with id: " + testCaseId);
@@ -204,7 +196,6 @@ public class ManualPageService {
 
         JiraTestCase testCase = optionalTestCase.get();
 
-        // Set project with validation
         if (projectId != null) {
             Optional<Project> optionalProject = projectRepository.findById(projectId);
             if (optionalProject.isPresent()) {
@@ -212,45 +203,35 @@ public class ManualPageService {
                 if (optionalProject.get().getDomain() != null) {
                     testCase.setDomainMapped(optionalProject.get().getDomain().getName());
                 }
-                logger.debug("Mapped test case {} to project: {}", testCaseId, optionalProject.get().getName());
-            }
-            else {
-                logger.warn("Project with ID {} does not exist, skipping project mapping for test case: {}", projectId, testCaseId);
+            } else {
                 throw new RuntimeException("Project not found with id: " + projectId);
             }
         }
 
-        // Set tester with validation
         if (testerId != null) {
             Optional<Tester> optionalTester = testerRepository.findById(testerId);
             if (optionalTester.isPresent()) {
                 testCase.setAssignedTester(optionalTester.get());
-                logger.debug("Assigned test case {} to tester: {}", testCaseId, optionalTester.get().getName());
-            }
-            else {
-                logger.warn("Tester with ID {} does not exist, skipping tester assignment for test case: {}", testerId, testCaseId);
+            } else {
                 throw new ResourceNotFoundException("Tester not found with id: " + testerId);
             }
         }
-        // Set manual tester with validation (optional)
+
         if (manualTesterId != null) {
             Optional<Tester> optionalManualTester = testerRepository.findById(manualTesterId);
             if (optionalManualTester.isPresent()) {
                 testCase.setManualTester(optionalManualTester.get());
-                logger.debug("Assigned manual tester for test case {}: {}", testCaseId, optionalManualTester.get().getName());
-            }
-            else {
-                logger.warn("Manual tester with ID {} does not exist for test case: {}", manualTesterId, testCaseId);
+            } else {
                 throw new ResourceNotFoundException("Manual Tester not found with id: " + manualTesterId);
             }
         }
 
-        // Set type and tool
-        if (testCaseType != null && !testCaseType.isBlank()) {
-            testCase.setTestCaseType(testCaseType);
+        // NEW: Convert string codes to lookup references
+        if (testCaseTypeCode != null && !testCaseTypeCode.isBlank()) {
+            testCase.setTestCaseType(lookupService.findOrCreateTestCaseType(testCaseTypeCode));
         }
-        if (toolType != null && !toolType.isBlank()) {
-            testCase.setToolType(toolType);
+        if (toolTypeCode != null && !toolTypeCode.isBlank()) {
+            testCase.setToolType(lookupService.findOrCreateToolType(toolTypeCode));
         }
 
         JiraTestCase savedTestCase = jiraTestCaseRepository.save(testCase);
@@ -419,27 +400,12 @@ public class ManualPageService {
      * Process automation readiness when test case is marked as "Can be Automated"
      */
     private void processAutomationReadiness(JiraTestCase jiraTestCase, boolean canBeAutomated) {
-        logger.info("Processing automation readiness for test case: {}", jiraTestCase.getQtestTitle());
         try {
-            // Check if we have project and tester assignment
             if (jiraTestCase.getProject() != null && jiraTestCase.getAssignedTester() != null) {
-
-                // Create or update corresponding TestCase entity
                 TestCase automationTestCase = createOrUpdateAutomationTestCase(jiraTestCase, canBeAutomated);
-
-                logger.info("Test case '{}' is ready for automation and assigned to tester: {}",
-                        jiraTestCase.getQtestTitle(),
-                        jiraTestCase.getAssignedTester().getName());
             }
-            else {
-                logger.warn("Test case '{}' marked as automatable but missing project or tester assignment",
-                        jiraTestCase.getQtestTitle());
-            }
-
-        }
-        catch (Exception e) {
-            logger.error("Error processing automation readiness for test case '{}': {}",
-                    jiraTestCase.getQtestTitle(), e.getMessage(), e);
+        } catch (Exception e) {
+            logger.error("Error processing automation readiness", e);
         }
     }
 
@@ -447,35 +413,43 @@ public class ManualPageService {
      * Create or update TestCase entity for automation
      */
     private TestCase createOrUpdateAutomationTestCase(JiraTestCase jiraTestCase, boolean canBeAutomated) {
-        // Check if automation test case already exists
         List<TestCase> existingTestCases = testCaseService.getAllTestCases()
                 .stream()
                 .filter(tc -> tc.getTitle().equals(jiraTestCase.getQtestTitle()))
                 .collect(Collectors.toList());
-        String status = canBeAutomated ? "Ready to Automate" : "Cannot be Automated";
+
+        // NEW: Determine status using lookup service
+        WorkflowStatus status = canBeAutomated
+                ? lookupService.findOrCreateWorkflowStatus("Ready to Automate")
+                : lookupService.findOrCreateWorkflowStatus("Cannot be Automated");
+
         TestCase testCase;
         if (!existingTestCases.isEmpty()) {
-            // Update existing test case
             testCase = existingTestCases.get(0);
             testCase.setStatus(status);
-        }
-        else {
-            // Create new test case
+        } else {
             testCase = new TestCase();
             testCase.setTitle(jiraTestCase.getQtestTitle());
-            testCase.setDescription("Test case imported from Jira issue: " + jiraTestCase.getJiraIssue().getJiraKey());
+            testCase.setDescription("Test case imported from Jira issue: " +
+                    jiraTestCase.getJiraIssue().getJiraKey());
 
-            // Use QTest priority if available, otherwise default to Medium
-            String priority = (jiraTestCase.getQtestPriority() != null && !jiraTestCase.getQtestPriority().isEmpty())
+            // NEW: Use lookup service for priority
+            String priorityCode = (jiraTestCase.getQtestPriority() != null &&
+                    !jiraTestCase.getQtestPriority().isEmpty())
                     ? jiraTestCase.getQtestPriority() : "Medium";
-            testCase.setPriority(priority);
+            testCase.setPriority(lookupService.findOrCreatePriority(priorityCode));
 
             testCase.setStatus(status);
             testCase.setProject(jiraTestCase.getProject());
             testCase.setTester(jiraTestCase.getAssignedTester());
-            // Propagate new fields
-            testCase.setTestCaseType(jiraTestCase.getTestCaseType());
-            testCase.setToolType(jiraTestCase.getToolType());
+
+            // NEW: Set lookup references for test case type and tool type
+            if (jiraTestCase.getTestCaseType() != null) {
+                testCase.setTestCaseType(jiraTestCase.getTestCaseType());
+            }
+            if (jiraTestCase.getToolType() != null) {
+                testCase.setToolType(jiraTestCase.getToolType());
+            }
             testCase.setManualTester(jiraTestCase.getManualTester());
         }
 
@@ -528,26 +502,32 @@ public class ManualPageService {
         dto.setQtestAutomationStatus(testCase.getQtestAutomationStatus());
         dto.setCanBeAutomated(testCase.getCanBeAutomated());
         dto.setCannotBeAutomated(testCase.getCannotBeAutomated());
-        dto.setAutomationStatus(testCase.getAutomationStatus());
+
+        // NEW: Convert automation status lookup to string code
+        dto.setAutomationStatus(testCase.getAutomationStatus() != null ?
+                testCase.getAutomationStatus().getCode() : null);
+
         dto.setAssignedTesterId(testCase.getAssignedTesterId());
         dto.setDomainMapped(testCase.getDomainMapped());
         dto.setNotes(testCase.getNotes());
         dto.setCreatedAt(testCase.getCreatedAt());
         dto.setUpdatedAt(testCase.getUpdatedAt());
 
-        // Set project information
         if (testCase.getProject() != null) {
             dto.setProjectId(testCase.getProject().getId());
             dto.setProjectName(testCase.getProject().getName());
         }
 
-        // Set tester information
         if (testCase.getAssignedTester() != null) {
             dto.setAssignedTesterName(testCase.getAssignedTester().getName());
         }
-        // New: Set manual coverage fields
-        dto.setTestCaseType(testCase.getTestCaseType());
-        dto.setToolType(testCase.getToolType());
+
+        // NEW: Convert test case type and tool type to string codes
+        dto.setTestCaseType(testCase.getTestCaseType() != null ?
+                testCase.getTestCaseType().getCode() : null);
+        dto.setToolType(testCase.getToolType() != null ?
+                testCase.getToolType().getCode() : null);
+
         if (testCase.getManualTester() != null) {
             dto.setManualTesterId(testCase.getManualTester().getId());
             dto.setManualTesterName(testCase.getManualTester().getName());
@@ -555,6 +535,7 @@ public class ManualPageService {
 
         return dto;
     }
+
 
     /**
      * Get effective assignee prioritizing QA tester names

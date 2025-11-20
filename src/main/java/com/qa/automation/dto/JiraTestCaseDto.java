@@ -1,9 +1,9 @@
 package com.qa.automation.dto;
 
-import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -18,7 +18,10 @@ public class JiraTestCaseDto {
     private String qtestAutomationStatus;
     private Boolean canBeAutomated;
     private Boolean cannotBeAutomated;
+
+    // Changed to string for backward compatibility
     private String automationStatus;
+
     private Long assignedTesterId;
     private String assignedTesterName;
     private Long projectId;
@@ -27,8 +30,11 @@ public class JiraTestCaseDto {
     private String notes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private String testCaseType; // "API" or "UI"
-    private String toolType; // "Selenium" or "Tosca"
+
+    // Changed to strings for backward compatibility
+    private String testCaseType;
+    private String toolType;
+
     private Long manualTesterId;
     private String manualTesterName;
 

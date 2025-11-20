@@ -2,10 +2,7 @@ package com.qa.automation.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.qa.automation.model.JenkinsResult;
-import com.qa.automation.model.JenkinsTestCase;
-import com.qa.automation.model.Project;
-import com.qa.automation.model.Tester;
+import com.qa.automation.model.*;
 import com.qa.automation.repository.JenkinsResultRepository;
 import com.qa.automation.repository.JenkinsTestCaseRepository;
 import java.time.Instant;
@@ -35,6 +32,7 @@ public class JenkinsService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final JenkinsResultRepository jenkinsResultRepository;
+    private final LookupService lookupService;
 
     private final JenkinsTestCaseRepository jenkinsTestCaseRepository;
 
@@ -138,27 +136,24 @@ public class JenkinsService {
         try {
             JsonNode buildInfo = fetchLatestCompletedBuildInfo(jobName);
             if (buildInfo == null) {
-                System.out.println("No completed builds found for job: " + jobName);
                 return;
             }
 
             String buildNumber = buildInfo.get("number").asText();
-            String buildStatus = buildInfo.get("result") != null ?
+            String buildStatusCode = buildInfo.get("result") != null ?
                     buildInfo.get("result").asText() : "IN_PROGRESS";
 
             Optional<JenkinsResult> existingResult = jenkinsResultRepository
                     .findByJobNameAndBuildNumber(jobName, buildNumber);
 
-            if (existingResult.isPresent() &&
-                    existingResult.get().getBuildStatus().equals(buildStatus)) {
-                System.out.println("Build " + buildNumber + " for job " + jobName + " is already up to date");
-                return;
-            }
-
             JenkinsResult jenkinsResult = existingResult.orElse(new JenkinsResult());
             jenkinsResult.setJobName(jobName);
             jenkinsResult.setBuildNumber(buildNumber);
+
+            // NEW: Convert build status string to lookup reference
+            BuildStatus buildStatus = lookupService.findOrCreateBuildStatus(buildStatusCode);
             jenkinsResult.setBuildStatus(buildStatus);
+
             jenkinsResult.setBuildUrl(buildInfo.get("url").asText());
 
             long timestamp = buildInfo.get("timestamp").asLong();
@@ -166,22 +161,13 @@ public class JenkinsService {
                     LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp),
                             java.time.ZoneId.systemDefault()));
 
-            // Try TestNG results first for counts
+            // Continue with existing code for test results...
             JsonNode testNGResults = fetchTestNGResults(jobName, buildNumber);
             if (testNGResults != null) {
                 processTestNGResults(jenkinsResult, testNGResults);
             }
-            else {
-                JsonNode standardResults = fetchStandardTestResults(jobName, buildNumber);
-                if (standardResults != null) {
-                    processStandardTestResults(jenkinsResult, standardResults);
-                }
-            }
 
             JenkinsResult savedResult = jenkinsResultRepository.save(jenkinsResult);
-            System.out.println("Saved Jenkins result for job: " + jobName + ", build: " + buildNumber);
-
-            // Now fetch individual test cases using Jenkins Test Results API
             fetchAndSaveIndividualTestCases(savedResult);
 
         }

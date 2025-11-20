@@ -1,5 +1,7 @@
 package com.qa.automation.service;
 
+import com.qa.automation.model.TestCase;
+import com.qa.automation.model.WorkflowStatus;
 import com.qa.automation.repository.DomainRepository;
 import com.qa.automation.repository.ProjectRepository;
 import com.qa.automation.repository.TestCaseRepository;
@@ -17,6 +19,7 @@ public class DashboardService {
 
     private final DomainRepository domainRepository;
 
+    private final LookupService lookupService;
 
     private final ProjectRepository projectRepository;
 
@@ -29,22 +32,58 @@ public class DashboardService {
     public Map<String, Object> getDashboardStats() {
         Map<String, Object> stats = new HashMap<>();
 
-        // Basic counts
+        // Basic counts (unchanged)
         stats.put("totalDomains", domainRepository.count());
         stats.put("totalProjects", projectRepository.count());
         stats.put("totalTestCases", testCaseRepository.count());
         stats.put("totalTesters", testerRepository.count());
 
-        // Active counts
-        stats.put("activeDomains", domainRepository.countByStatus("Active"));
-        stats.put("activeProjects", projectRepository.countByStatus("Active"));
+        // NEW: Use lookup service to get status IDs for counting
+        WorkflowStatus activeStatus = lookupService.findOrCreateWorkflowStatus("Active");
 
-        // Test case status counts
-        stats.put("automatedTestCases", testCaseRepository.countByStatus("Automated"));
-        stats.put("inProgressTestCases", testCaseRepository.countByStatus("In Progress"));
-        stats.put("readyTestCases", testCaseRepository.countByStatus("Ready to Automate"));
-        stats.put("completedTestCases", testCaseRepository.countByStatus("Completed"));
-        stats.put("cannotBeAutomated", testCaseRepository.countByStatus("Cannot be Automated"));
+        // Count active domains
+        long activeDomains = domainRepository.findAll().stream()
+                .filter(d -> d.getStatus() != null &&
+                        d.getStatus().getId().equals(activeStatus.getId()))
+                .count();
+        stats.put("activeDomains", activeDomains);
+
+        // Count active projects
+        long activeProjects = projectRepository.findAll().stream()
+                .filter(p -> p.getStatus() != null &&
+                        p.getStatus().getId().equals(activeStatus.getId()))
+                .count();
+        stats.put("activeProjects", activeProjects);
+
+        // NEW: Test case counts using workflow statuses
+        WorkflowStatus automatedStatus = lookupService.findOrCreateWorkflowStatus("Automated");
+        WorkflowStatus inProgressStatus = lookupService.findOrCreateWorkflowStatus("In Progress");
+        WorkflowStatus readyStatus = lookupService.findOrCreateWorkflowStatus("Ready to Automate");
+        WorkflowStatus completedStatus = lookupService.findOrCreateWorkflowStatus("Completed");
+        WorkflowStatus cannotStatus = lookupService.findOrCreateWorkflowStatus("Cannot be Automated");
+
+        List<TestCase> allTestCases = testCaseRepository.findAll();
+
+        stats.put("automatedTestCases", allTestCases.stream()
+                .filter(tc -> tc.getStatus() != null &&
+                        tc.getStatus().getId().equals(automatedStatus.getId()))
+                .count());
+        stats.put("inProgressTestCases", allTestCases.stream()
+                .filter(tc -> tc.getStatus() != null &&
+                        tc.getStatus().getId().equals(inProgressStatus.getId()))
+                .count());
+        stats.put("readyTestCases", allTestCases.stream()
+                .filter(tc -> tc.getStatus() != null &&
+                        tc.getStatus().getId().equals(readyStatus.getId()))
+                .count());
+        stats.put("completedTestCases", allTestCases.stream()
+                .filter(tc -> tc.getStatus() != null &&
+                        tc.getStatus().getId().equals(completedStatus.getId()))
+                .count());
+        stats.put("cannotBeAutomated", allTestCases.stream()
+                .filter(tc -> tc.getStatus() != null &&
+                        tc.getStatus().getId().equals(cannotStatus.getId()))
+                .count());
 
         return stats;
     }

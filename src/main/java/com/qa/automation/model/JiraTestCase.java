@@ -1,19 +1,9 @@
 package com.qa.automation.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import jakarta.persistence.*;
 import lombok.Data;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "jira_test_cases")
@@ -45,8 +35,10 @@ public class JiraTestCase {
     @Column(name = "cannot_be_automated", nullable = false)
     private Boolean cannotBeAutomated = false;
 
-    @Column(name = "automation_status")
-    private String automationStatus; // "READY_TO_AUTOMATE", "NOT_AUTOMATABLE", "PENDING"
+    // Updated to use AutomationStatus lookup table
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "automation_status_id")
+    private AutomationStatus automationStatus;
 
     @Column(name = "assigned_tester_id")
     private Long assignedTesterId;
@@ -66,12 +58,15 @@ public class JiraTestCase {
     @JsonIgnoreProperties("testCases")
     private Tester assignedTester;
 
-    // New fields for manual coverage context
-    @Column(name = "test_case_type")
-    private String testCaseType; // "API" or "UI"
+    // Updated to use TestCaseType lookup table
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "test_case_type_id")
+    private TestCaseType testCaseType;
 
-    @Column(name = "tool_type")
-    private String toolType; // "Selenium" or "Tosca"
+    // Updated to use ToolType lookup table
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "tool_type_id")
+    private ToolType toolType;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "manual_tester_id")
@@ -94,8 +89,6 @@ public class JiraTestCase {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-
-        // Set automation status based on checkbox values
         updateAutomationStatus();
     }
 
@@ -105,24 +98,14 @@ public class JiraTestCase {
         updateAutomationStatus();
     }
 
-    // Private method to update automation status
     private void updateAutomationStatus() {
-        if (canBeAutomated && !cannotBeAutomated) {
-            this.automationStatus = "Ready to Automate";
-        }
-        else if (!canBeAutomated && cannotBeAutomated) {
-            this.automationStatus = "NOT_AUTOMATABLE";
-        }
-        else {
-            this.automationStatus = "PENDING";
-        }
+        // This will be handled by the service layer with proper lookup
     }
 
     public void setCannotBeAutomated(Boolean cannotBeAutomated) {
         this.cannotBeAutomated = cannotBeAutomated;
         updateAutomationStatus();
     }
-
 
     public void setAssignedTester(Tester assignedTester) {
         this.assignedTester = assignedTester;
@@ -131,17 +114,28 @@ public class JiraTestCase {
         }
     }
 
-    // Helper methods
     public boolean isReadyToAutomate() {
-        return "Ready to Automate".equals(automationStatus);
+        return automationStatus != null && "READY_TO_AUTOMATE".equalsIgnoreCase(automationStatus.getCode());
     }
 
     public boolean isNotAutomatable() {
-        return "NOT_AUTOMATABLE".equals(automationStatus);
+        return automationStatus != null && "NOT_AUTOMATABLE".equalsIgnoreCase(automationStatus.getCode());
     }
 
     public boolean isPending() {
-        return "PENDING".equals(automationStatus);
+        return automationStatus != null && "PENDING".equalsIgnoreCase(automationStatus.getCode());
     }
 
+    // Backward compatibility - String getters
+    public String getAutomationStatusCode() {
+        return automationStatus != null ? automationStatus.getCode() : null;
+    }
+
+    public String getTestCaseTypeCode() {
+        return testCaseType != null ? testCaseType.getCode() : null;
+    }
+
+    public String getToolTypeCode() {
+        return toolType != null ? toolType.getCode() : null;
+    }
 }
